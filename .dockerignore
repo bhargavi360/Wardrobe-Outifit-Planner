@@ -1,0 +1,8 @@
+**/.git
+**/.venv
+**/node_modules
+**/.next
+**/uploads
+**/__pycache__
+**/.pytest_cache
+**/.DS_Store

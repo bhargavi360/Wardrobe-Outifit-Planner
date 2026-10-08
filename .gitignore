@@ -1,0 +1,31 @@
+# JavaScript / Next.js
+node_modules/
+.next/
+.next-*/
+.next-thread/
+out/
+*.tsbuildinfo
+.vercel/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+**/.venv*/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# User uploads and generated ML artifacts
+backend/uploads/*
+!backend/uploads/.gitkeep
+ml/artifacts/*
+!ml/artifacts/.gitkeep

@@ -324,10 +324,48 @@ Invoke-RestMethod http://localhost:8000/api/health
 curl http://localhost:3000
 ```
 
+### Vercel + Render + MongoDB Atlas deployment
+
+The recommended hosted setup deploys the Next.js app to Vercel, the FastAPI
+service to Render, and stores MongoDB data in MongoDB Atlas. The Render
+Blueprint is defined in `render.yaml`; its persistent disk stores uploaded
+wardrobe images across service restarts and deploys.
+
+1. Create an Atlas database and database user. Copy its connection string,
+   replace the username, password, and database name, and allow Render's
+   outbound connections in Atlas Network Access. Use a unique database
+   password and URL-encode special characters in it.
+2. Import this repository into Render as a Blueprint. Enter the Atlas URI when
+   prompted for `MONGODB_URI`. The Blueprint creates a paid Starter web service,
+   a generated JWT secret, and a 1 GB persistent upload disk mounted at
+   `/var/data`. Keep `AUTH_COOKIE_SECURE=true`; do not commit secrets.
+3. Wait for the Render service to become healthy. Copy its origin, for example
+   `https://smart-wardrobe-api.onrender.com` (without `/api`), and verify
+   `https://<render-service>/api/health` returns `{"status":"ok","database":"ok"}`.
+4. Import the same repository into Vercel and set the project **Root Directory**
+   to `frontend`. Add these environment variables for Production:
+   - `NEXT_PUBLIC_API_URL=/api`
+   - `WARDROBE_API_ORIGIN=https://<render-service>.onrender.com`
+5. Deploy the Vercel project. `next.config.ts` proxies `/api/*` requests through
+   the Next.js app to Render. This keeps authentication cookies same-origin in
+   the browser and avoids exposing the backend URL to client-side JavaScript.
+6. In Vercel, add the production URL to **Domains** if using a custom domain,
+   then redeploy after changing environment variables. Test registration,
+   sign-in, loading `/api/auth/me` through the app, and uploading an image.
+
+The browser should call the Vercel origin for API requests; do not set
+`NEXT_PUBLIC_API_URL` to the Render URL for this setup. The Render API's
+`CORS_ORIGINS` is empty by default because browser traffic is same-origin via
+the proxy. If calling the API directly from another browser origin, configure
+that exact origin in Render and redeploy. The Render Starter plan is needed for
+the persistent upload disk; changing to ephemeral storage can lose uploaded
+images during redeploys. MongoDB Atlas remains the durable database.
+
 ### Root project documentation
 
 The repository includes:
 
+- `render.yaml` for the Render API service and persistent upload disk
 - `backend/requirements.txt` for Python dependencies
 - `docker-compose.yml` for local orchestration
 - `frontend/Dockerfile` and `backend/Dockerfile` for containerized deployment

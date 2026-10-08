@@ -1,0 +1,44 @@
+﻿services:
+  mongo:
+    image: mongo:7
+    container_name: smart-wardrobe-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: smart-wardrobe-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DATABASE: smart_wardrobe
+      CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000"]'
+      JWT_SECRET_KEY: replace-me
+      GEMINI_API_KEY: ""
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: smart-wardrobe-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

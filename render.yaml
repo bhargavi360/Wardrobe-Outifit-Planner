@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: smart-wardrobe-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    disk:
+      name: wardrobe-uploads
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: smart_wardrobe
+      - key: CORS_ORIGINS
+        value: "[]"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: AUTH_COOKIE_SECURE
+        value: "true"
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
