@@ -1,14 +1,12 @@
 import type { NextConfig } from 'next';
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 
-const wardrobeApiOrigin = process.env.WARDROBE_API_ORIGIN?.replace(/\/+$/, '');
+const wardrobeApiOrigin = (
+  process.env.WARDROBE_API_ORIGIN || 'http://127.0.0.1:8000'
+).replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
-  distDir: process.env.NEXT_DIST_DIR || '.next-thread',
   async rewrites() {
-    if (!wardrobeApiOrigin) {
-      return [];
-    }
-
     return [
       {
         source: '/api/:path*',
@@ -30,4 +28,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default function config(phase: string): NextConfig {
+  return {
+    ...nextConfig,
+    distDir: process.env.NEXT_DIST_DIR || (
+      phase === PHASE_DEVELOPMENT_SERVER ? '.next-thread-dev' : '.next-thread'
+    ),
+  };
+}

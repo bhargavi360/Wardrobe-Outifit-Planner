@@ -7,6 +7,12 @@
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand({ping:1}).ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   backend:
     build:
@@ -19,21 +25,27 @@
       MONGODB_URI: mongodb://mongo:27017
       MONGODB_DATABASE: smart_wardrobe
       CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000"]'
-      JWT_SECRET_KEY: replace-me
-      GEMINI_API_KEY: ""
+      UPLOADS_DIR: /var/data/uploads
+    volumes:
+      - wardrobe_uploads:/var/data/uploads
     ports:
       - "8000:8000"
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        WARDROBE_API_ORIGIN: http://backend:8000
     container_name: smart-wardrobe-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:8000/api
+      NEXT_PUBLIC_API_URL: /api
+      WARDROBE_API_ORIGIN: http://backend:8000
     ports:
       - "3000:3000"
     depends_on:
@@ -42,3 +54,4 @@
 
 volumes:
   mongo_data:
+  wardrobe_uploads:

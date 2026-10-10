@@ -26,6 +26,7 @@ def create_access_token(
     subject: str,
     secret_key: str,
     expires_minutes: int,
+    session_version: int = 0,
 ) -> str:
     """Create a signed JWT access token for a non-empty subject."""
     _validate_secret_key(secret_key)
@@ -39,6 +40,7 @@ def create_access_token(
         "sub": subject,
         "iat": now,
         "exp": now + timedelta(minutes=expires_minutes),
+        "version": session_version,
     }
     return jwt.encode(payload, secret_key, algorithm="HS256")
 

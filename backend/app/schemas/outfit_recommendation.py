@@ -51,6 +51,7 @@ class OutfitRecommendationRequest(BaseModel):
     occasion: OccasionType
     weather: WeatherInput
     user_preferences: UserPreferenceSnapshot | None = None
+    required_item_id: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 class OutfitItemSummary(BaseModel):

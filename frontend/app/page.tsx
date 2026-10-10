@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { ThreadIntro } from "../components/landing/ThreadIntro";
 
 export default function HomePage() {
-  redirect("/login");
+  return <ThreadIntro />;
 }

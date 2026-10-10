@@ -1,5 +1,7 @@
 """Unit tests for outfit recommendation scoring and candidate generation."""
 
+import pytest
+
 from app.schemas.outfit_recommendation import OccasionType, WeatherCondition
 from app.services.outfit_recommender import (
     _color_harmony,
@@ -130,3 +132,66 @@ def test_candidate_generation_handles_dresses_and_incomplete_wardrobes() -> None
         22,
         WeatherCondition.SUNNY,
     ) == []
+
+
+def test_sporty_preference_boosts_gym_outfits() -> None:
+    arguments = dict(
+        wardrobe_items=_wardrobe(),
+        occasion=OccasionType.GYM,
+        temperature_c=22,
+        condition=WeatherCondition.SUNNY,
+    )
+    baseline = recommend_outfits(**arguments)[0]
+    personalized = recommend_outfits(
+        **arguments, preferences={"preferred_styles": ["sporty"]}
+    )[0]
+    assert personalized["score"] == pytest.approx(baseline["score"] + 0.35)
+    assert any(
+        reason.label == "matches preferred style: gym"
+        for reason in personalized["reasons"]
+    )
+
+
+@pytest.mark.parametrize("category", ["top", "bottom", "dress", "outerwear", "footwear", "accessory"])
+def test_required_piece_is_in_every_recommendation(category: str) -> None:
+    pinned = {"id": "chosen-piece", "name": "Chosen piece", "category": category, "dominant_colors": ["red"]}
+    results = recommend_outfits(
+        [*_wardrobe(), pinned], OccasionType.CASUAL, 30, WeatherCondition.SUNNY,
+        required_item_id="chosen-piece",
+    )
+    assert results
+    assert all("chosen-piece" in {piece["id"] for piece in result["items"]} for result in results)
+    if category in {"top", "bottom"}:
+        assert all(not any(piece["category"] == "dress" for piece in result["items"]) for result in results)
+
+
+def test_required_piece_bypasses_shortlist_and_missing_pieces_do_not_generate() -> None:
+    wardrobe = [
+        {"id": f"top-{i}", "name": "Preferred shirt", "category": "top", "dominant_colors": ["blue"]}
+        for i in range(30)
+    ] + [
+        {"id": "chosen", "name": "Disliked tee", "category": "top", "dominant_colors": ["red"]},
+        {"id": "bottom", "category": "bottom"},
+    ]
+    arguments = dict(
+        wardrobe_items=wardrobe, occasion=OccasionType.CASUAL,
+        temperature_c=22, condition=WeatherCondition.SUNNY,
+        preferences={"favorite_colors": ["blue"], "disliked_colors": ["red"]},
+    )
+    results = recommend_outfits(**arguments, required_item_id="chosen")
+    assert results
+    assert all("chosen" in {piece["id"] for piece in result["items"]} for result in results)
+    assert recommend_outfits(**arguments, required_item_id="not-in-wardrobe") == []
+    assert recommend_outfits(
+        [{"id": "only-top", "category": "top"}], OccasionType.CASUAL,
+        22, WeatherCondition.SUNNY, required_item_id="only-top",
+    ) == []
+
+
+def test_laundry_items_are_never_recommended():
+    wardrobe = _wardrobe()
+    wardrobe[0]["availability"] = "laundry"
+    results = recommend_outfits(wardrobe, OccasionType.CASUAL, 22, WeatherCondition.SUNNY)
+    assert results
+    assert all("top-1" not in {item["id"] for item in result["items"]} for result in results)
+    assert recommend_outfits(wardrobe, OccasionType.CASUAL, 22, WeatherCondition.SUNNY, required_item_id="top-1") == []

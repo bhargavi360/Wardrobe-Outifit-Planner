@@ -3,10 +3,12 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { ToastProvider } from "../components/ToastProvider";
 import { AuthProvider } from "./providers";
 import "./globals.css";
+import "./refinements.css";
+import "./planning.css";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["300"],
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   variable: "--font-thread-serif",
   display: "swap",
@@ -14,7 +16,7 @@ const cormorant = Cormorant_Garamond({
 
 const manrope = Manrope({
   subsets: ["latin"],
-  weight: ["300"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-thread-sans",
   display: "swap",
 });

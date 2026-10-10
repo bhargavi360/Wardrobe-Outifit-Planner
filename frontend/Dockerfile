@@ -1,14 +1,19 @@
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
 COPY frontend/package*.json ./
-RUN npm install --frozen-lockfile
+RUN npm ci
+
+ARG NEXT_PUBLIC_API_URL=/api
+ARG WARDROBE_API_ORIGIN
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV WARDROBE_API_ORIGIN=${WARDROBE_API_ORIGIN}
 
 COPY frontend .
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 COPY --from=builder /app .

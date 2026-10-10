@@ -1,0 +1,50 @@
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
+import { apiRequest, fetchWardrobe } from '../../lib/api';
+import SavedOutfitsPage from './page';
+vi.mock('../../lib/api', () => ({ apiRequest: vi.fn(), fetchWardrobe: vi.fn(), apiImageUrl: (url: string) => url }));
+vi.mock('../../components/AppShell', () => ({ AppShell: ({ children }: { children: ReactNode }) => children }));
+vi.mock('../../components/ToastProvider', () => ({ useToast: () => () => {} }));
+const pieces = [{ id: 'a', name: 'Scarf', category: 'accessory', image_url: '/a.jpg', dominant_colors: ['rose'], sub_type: null }, { id: 'b', name: 'Bag', category: 'accessory', image_url: '/b.jpg', dominant_colors: ['ivory'], sub_type: null }];
+const look = { id: 'look', name: 'Evening', occasion: 'formal', notes: 'Silk finish', is_favorite: true, items: pieces.map(piece => ({ ...piece, item_id: piece.id })), created_at: '2026-10-10', updated_at: '2026-10-10' };
+beforeEach(() => {
+  vi.clearAllMocks(); vi.stubGlobal('matchMedia', () => ({ matches: true })); HTMLElement.prototype.scrollIntoView = vi.fn();
+  vi.mocked(fetchWardrobe).mockResolvedValue(pieces);
+  vi.mocked(apiRequest).mockImplementation((_path, init) => Promise.resolve(init?.method === 'PATCH' ? { ...look, ...JSON.parse(String(init.body)) } : [look, { ...look, id: 'other', name: 'Morning', occasion: 'casual', is_favorite: false, notes: 'Cotton' }]));
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it('combines search, occasion and favorite filters, and clears empty results', async () => {
+  render(<SavedOutfitsPage />);
+  await screen.findByRole('article', { name: 'Evening' });
+  fireEvent.click(screen.getByLabelText('Favorites only'));
+  expect(screen.queryByRole('article', { name: 'Morning' })).toBeNull();
+  fireEvent.change(screen.getByLabelText('Search outfits'), { target: { value: 'silk' } });
+  expect(screen.getByRole('article', { name: 'Evening' })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Filter by occasion'), { target: { value: 'casual' } });
+  expect(screen.getByText('No looks match these filters.')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+  expect(screen.getAllByRole('article')).toHaveLength(2);
+});
+it('edits all metadata and retains multiple pieces from the same category', async () => {
+  render(<SavedOutfitsPage />);
+  const card = await screen.findByRole('article', { name: 'Evening' });
+  fireEvent.click(within(card).getByRole('button', { name: 'Edit outfit' }));
+  expect((screen.getByLabelText('Occasion') as HTMLSelectElement).value).toBe('formal');
+  expect((screen.getByLabelText('Notes') as HTMLTextAreaElement).value).toBe('Silk finish');
+  fireEvent.change(screen.getByLabelText('Outfit name'), { target: { value: 'Updated evening' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  await waitFor(() => expect(vi.mocked(apiRequest)).toHaveBeenCalledWith('/outfits/look', expect.objectContaining({ method: 'PATCH' })));
+  const call = vi.mocked(apiRequest).mock.calls.find(([, init]) => init?.method === 'PATCH');
+  const payload = JSON.parse(String(call?.[1]?.body));
+  expect(payload.items.map((item: { item_id: string }) => item.item_id)).toEqual(['a', 'b']);
+  expect(payload).toMatchObject({ name: 'Updated evening', notes: 'Silk finish', occasion: 'formal', is_favorite: true });
+});
+it('requires an explicit delete action and allows keeping an outfit', async () => {
+  render(<SavedOutfitsPage />);
+  const card = await screen.findByRole('article', { name: 'Evening' });
+  fireEvent.click(within(card).getByRole('button', { name: 'Delete' }));
+  expect(vi.mocked(apiRequest).mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
+  fireEvent.click(within(card).getByRole('button', { name: 'Keep outfit' }));
+  expect(within(card).queryByRole('button', { name: 'Confirm delete' })).toBeNull();
+});

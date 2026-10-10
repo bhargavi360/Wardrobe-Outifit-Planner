@@ -1,12 +1,15 @@
- 'use client';
+'use client';
 
- import Image from 'next/image';
- import Link from 'next/link';
- import { useCallback, useEffect, useMemo, useState } from 'react';
-import { apiRequest } from '../../lib/api';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { apiRequest, apiImageUrl, fetchWardrobe } from '../../lib/api';
 import { AppShell } from '../../components/AppShell';
 import { ImageLightbox, ZoomableImageCard } from '../../components/ImageZoom';
 import { useToast } from '../../components/ToastProvider';
+import { OutfitPreview } from '../../components/OutfitPreview';
+import { WeatherPicker } from '../../components/WeatherPicker';
+import { useAuth } from '../providers';
 
 type WardrobeItem = {
   id: string;
@@ -15,6 +18,7 @@ type WardrobeItem = {
   dominant_colors: string[];
   image_url: string;
   sub_type: string | null;
+  availability?: 'available' | 'laundry';
 };
 
 type Recommendation = {
@@ -61,11 +65,17 @@ function recommendationKey(recommendation: Recommendation): string {
 }
 
 export default function OutfitPlannerPage() {
+  const { user } = useAuth();
   const showToast = useToast();
   const [wardrobe, setWardrobe] = useState<WardrobeItem[]>([]);
   const [occasion, setOccasion] = useState<(typeof occasions)[number]>('casual');
-  const [temperature, setTemperature] = useState(22);
+  const [temperatureInput, setTemperatureInput] = useState('22');
+  const temperature = Number(temperatureInput);
+  const validTemperature = temperatureInput.trim() !== '' && Number.isFinite(temperature) && temperature >= -30 && temperature <= 60;
+  const temperatureError = validTemperature ? '' : 'Enter a temperature between −30°C and 60°C.';
   const [condition, setCondition] = useState<(typeof weatherOptions)[number]>('sunny');
+  const [requiredItemId, setRequiredItemId] = useState('');
+  const requiredItem = wardrobe.find(item => item.id === requiredItemId);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -75,7 +85,10 @@ export default function OutfitPlannerPage() {
   const [stylingLoadingKey, setStylingLoadingKey] = useState<string | null>(null);
   const [builderItems, setBuilderItems] = useState<Record<string, string>>({});
   const [builderName, setBuilderName] = useState('');
+  const [builderOccasion, setBuilderOccasion] = useState<(typeof occasions)[number]>('casual');
   const [builderOpen, setBuilderOpen] = useState(false);
+  const builderRef = useRef<HTMLElement>(null);
+  const requestVersion = useRef(0);
   const [saveMessage, setSaveMessage] = useState('');
   const [isSavingOutfit, setIsSavingOutfit] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
@@ -83,8 +96,8 @@ export default function OutfitPlannerPage() {
   useEffect(() => {
     const loadWardrobe = async () => {
       try {
-        const items = await apiRequest<WardrobeItem[]>('/wardrobe');
-        setWardrobe(items);
+        const items = await fetchWardrobe<WardrobeItem>();
+        setWardrobe(items.map((item) => ({ ...item, image_url: apiImageUrl(item.image_url) })));
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Unable to load your closet.');
       } finally {
@@ -96,45 +109,53 @@ export default function OutfitPlannerPage() {
   }, []);
 
   const promptSummary = useMemo(
-    () => `${occasion} · ${temperature}°C · ${condition}`,
-    [condition, occasion, temperature],
+    () => `${occasion} · ${validTemperature ? temperature : '—'}°C · ${condition}`,
+    [condition, occasion, temperature, validTemperature],
   );
 
-  const generateRecommendations = useCallback(async () => {
-    if (loading) {
-      return;
-    }
-
-    if (wardrobe.length === 0) {
-      setRecommendations([]);
-      return;
-    }
-
-    try {
-      setError('');
-      setIsGenerating(true);
-      const response = await apiRequest<{ recommendations: Recommendation[] }>('/outfits/recommend', {
-        method: 'POST',
-        body: JSON.stringify({
-          occasion,
-          weather: {
-            temperature_c: temperature,
-            condition,
-          },
-        }),
-      });
-      setRecommendations(response.recommendations);
-      setStylingTips({});
-      setStylingErrors({});
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to generate outfit recommendations.');
-      setRecommendations([]);
-    } finally {
+  useEffect(() => {
+    requestVersion.current += 1;
+    setRecommendations([]);
+    setStylingTips({});
+    setStylingErrors({});
+    setStylingLoadingKey(null);
+    setActiveImageIndex(null);
+    if (loading || wardrobe.length === 0 || !validTemperature) {
       setIsGenerating(false);
+      return;
     }
-  }, [condition, loading, occasion, temperature, wardrobe]);
+
+    let active = true;
+    const controller = new AbortController();
+    setError('');
+    setIsGenerating(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await apiRequest<{ recommendations: Recommendation[] }>('/outfits/recommend', {
+          method: 'POST',
+          signal: controller.signal,
+          body: JSON.stringify({
+            occasion,
+            weather: { temperature_c: temperature, condition },
+            required_item_id: requiredItemId || undefined,
+          }),
+        });
+        if (active) setRecommendations(response.recommendations);
+      } catch (caught) {
+        if (active) setError(caught instanceof Error ? caught.message : 'Unable to generate outfit recommendations.');
+      } finally {
+        if (active) setIsGenerating(false);
+      }
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [condition, loading, occasion, temperature, validTemperature, wardrobe, requiredItemId]);
 
   const requestStylingTips = async (recommendation: Recommendation) => {
+    const version = requestVersion.current;
     const key = recommendationKey(recommendation);
     setStylingLoadingKey(key);
     setStylingErrors((current) => ({ ...current, [key]: '' }));
@@ -150,14 +171,14 @@ export default function OutfitPlannerPage() {
           items: recommendation.items,
         }),
       });
-      setStylingTips((current) => ({ ...current, [key]: result }));
+      if (version === requestVersion.current) setStylingTips((current) => ({ ...current, [key]: result }));
     } catch (caught) {
-      setStylingErrors((current) => ({
+      if (version === requestVersion.current) setStylingErrors((current) => ({
         ...current,
         [key]: caught instanceof Error ? caught.message : 'Unable to load styling suggestions.',
       }));
     } finally {
-      setStylingLoadingKey(null);
+      if (version === requestVersion.current) setStylingLoadingKey(null);
     }
   };
 
@@ -168,19 +189,25 @@ export default function OutfitPlannerPage() {
     });
     setBuilderItems(selected);
     setBuilderName(`${occasion[0].toUpperCase()}${occasion.slice(1)} look`);
+    setBuilderOccasion(occasion);
     setBuilderOpen(true);
     setSaveMessage('');
   };
 
+  const selectedBuilderItems = builderCategories
+    .map(category => wardrobe.find(item => item.id === builderItems[category]))
+    .filter((item): item is WardrobeItem => item !== undefined);
+
+  useEffect(() => {
+    if (builderOpen) builderRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
+  }, [builderOpen]);
+
   const saveCustomizedOutfit = async () => {
-    const selectedItems = builderCategories
-      .map((category) => wardrobe.find((item) => item.id === builderItems[category]))
-      .filter((item): item is WardrobeItem => item !== undefined);
     if (!builderName.trim()) {
       setError('Give your outfit a name before saving it.');
       return;
     }
-    if (selectedItems.length === 0) {
+    if (selectedBuilderItems.length === 0) {
       setError('Choose at least one wardrobe piece for your outfit.');
       return;
     }
@@ -191,8 +218,8 @@ export default function OutfitPlannerPage() {
         method: 'POST',
         body: JSON.stringify({
           name: builderName.trim(),
-          occasion,
-          items: selectedItems.map((item) => ({
+          occasion: builderOccasion,
+          items: selectedBuilderItems.map((item) => ({
             item_id: item.id,
             category: item.category,
             name: item.name,
@@ -210,10 +237,6 @@ export default function OutfitPlannerPage() {
       setIsSavingOutfit(false);
     }
   };
-
-  useEffect(() => {
-    void generateRecommendations();
-  }, [generateRecommendations]);
 
   const lightboxItems = useMemo(
     () =>
@@ -244,6 +267,7 @@ export default function OutfitPlannerPage() {
               <div className="rounded-full bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700">{promptSummary}</div>
             </div>
 
+            <WeatherPicker initialCity={user?.city} onApply={weather => { setTemperatureInput(String(weather.temperature_c)); setCondition(weather.condition); }} />
             <div className="grid gap-4 lg:grid-cols-3">
               <label className="block">
                 <span className="mb-2 block text-sm font-medium text-slate-600">Occasion</span>
@@ -259,15 +283,20 @@ export default function OutfitPlannerPage() {
               </label>
 
               <label className="block">
-                <span className="mb-2 block text-sm font-medium text-slate-600">Temperature</span>
+                <span id="planner-temperature-label" className="mb-2 block text-sm font-medium text-slate-600">Temperature (°C)</span>
                 <input
                   type="number"
                   min={-30}
                   max={60}
-                  value={temperature}
-                  onChange={(event) => setTemperature(Number(event.target.value))}
+                  step="any"
+                  value={temperatureInput}
+                  aria-labelledby="planner-temperature-label"
+                  aria-invalid={!validTemperature}
+                  aria-describedby={temperatureError ? 'planner-temperature-error' : undefined}
+                  onChange={(event) => setTemperatureInput(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-slate-700 outline-none focus:border-slate-300 focus:bg-white"
                 />
+                {temperatureError && <span id="planner-temperature-error" role="alert" className="mt-2 block text-sm text-red-700">{temperatureError}</span>}
               </label>
 
               <label className="block">
@@ -283,12 +312,30 @@ export default function OutfitPlannerPage() {
                 </select>
               </label>
             </div>
+            <div className="planner-anchor-control">
+              <label>
+                <span>Build around this piece</span>
+                <select value={requiredItemId} disabled={loading || wardrobe.length === 0} onChange={event => setRequiredItemId(event.target.value)} aria-describedby="planner-anchor-help">
+                  <option value="">Any piece — surprise me</option>
+                  {builderCategories.map(category => {
+                    const pieces = wardrobe.filter(item => item.category === category);
+                    return pieces.length ? <optgroup key={category} label={category}>{pieces.map(piece => <option key={piece.id} value={piece.id} disabled={piece.availability === 'laundry'}>{piece.name}{piece.availability === 'laundry' ? ' · In laundry' : ''}</option>)}</optgroup> : null;
+                  })}
+                </select>
+              </label>
+              <p id="planner-anchor-help">Choose a piece you want to wear. Every suggestion will include it.</p>
+              {requiredItem && <div className="planner-anchor-piece">
+                <img src={requiredItem.image_url} alt={requiredItem.name} />
+                <div><span>Your starting point</span><strong>{requiredItem.name}</strong></div>
+                <button type="button" onClick={() => setRequiredItemId('')}>Clear piece</button>
+              </div>}
+            </div>
           </div>
         </section>
 
         <div id="daily-outfit-recommendations" className="planner-recommendations">
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -303,6 +350,8 @@ export default function OutfitPlannerPage() {
               </div>
             ))}
           </div>
+        ) : !validTemperature ? (
+          <p className="planner-guidance">Choose a valid temperature above to generate your looks.</p>
         ) : recommendations.length === 0 ? (
           <div className="planner-editorial-empty">
             <div className="planner-editorial-image">
@@ -316,7 +365,8 @@ export default function OutfitPlannerPage() {
             <div className="planner-editorial-copy">
               <p className="planner-editorial-kicker">A LOOK TAKES SHAPE</p>
               <h2>No outfit ideas yet.</h2>
-              <p>Add wardrobe pieces to begin composing looks around your occasion and the day ahead.</p>
+              <p>{requiredItem ? `Add a matching top and bottom, or a dress, to build a complete look around ${requiredItem.name}. You can also clear this piece to explore other looks.` : 'Start with a top and bottom, or a dress. Add shoes and layers for more combinations.'}</p>
+              {requiredItem && <button type="button" className="planner-clear-anchor" onClick={() => setRequiredItemId('')}>Explore all pieces</button>}
               <Link href="/wardrobe">Visit your wardrobe <span aria-hidden="true">↗</span></Link>
             </div>
           </div>
@@ -426,7 +476,7 @@ export default function OutfitPlannerPage() {
           </p>
         ) : null}
         {builderOpen ? (
-          <section className="rounded-3xl border border-rose-200 bg-white p-5 shadow-sm">
+          <section ref={builderRef} className="planner-builder rounded-3xl border border-rose-200 bg-white p-5 shadow-sm" aria-label="Outfit customizer">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-700">Make it yours</p>
@@ -441,9 +491,10 @@ export default function OutfitPlannerPage() {
                 Close
               </button>
             </div>
+            <OutfitPreview items={selectedBuilderItems} />
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {builderCategories.map((category) => {
-                const options = wardrobe.filter((item) => item.category === category);
+                const options = wardrobe.filter((item) => item.category === category && item.availability !== 'laundry');
                 if (options.length === 0) return null;
                 return (
                   <label key={category} className="block">
@@ -488,6 +539,7 @@ export default function OutfitPlannerPage() {
         ) : null}
         </div>
       </main>
+      {activeImageIndex !== null && lightboxItems.length > 0 && <ImageLightbox items={lightboxItems} initialIndex={activeImageIndex} onClose={() => setActiveImageIndex(null)} />}
     </AppShell>
   );
 }

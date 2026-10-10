@@ -2,7 +2,7 @@
 
 A monorepo for a wardrobe and outfit-planning application. The existing Next.js
 client is in `frontend/`; the asynchronous FastAPI API and MongoDB integration
-are in `backend/`; future computer-vision and model-training code belongs in
+are in `backend/`; computer-vision and model-training code is in
 `ml/`.
 
 ## Repository layout
@@ -29,7 +29,7 @@ flowchart LR
     Browser[Next.js frontend] -->|HTTP /api| API[FastAPI backend]
     API --> Mongo[(MongoDB)]
     API --> Uploads[Local uploads adapter]
-    API -. future inference .-> ML[ML package]
+    API -->|Inference| ML[ML package]
     ML -. model artifacts .-> Weights[Ignored artifacts directory]
 ```
 
@@ -37,11 +37,26 @@ flowchart LR
 
 ### Prerequisites
 
-- Node.js 20 or newer and npm
+- Node.js 22.12 or newer and npm
 - Python 3.11 or newer
 - MongoDB 6 or newer, running locally or at a configured URI
 
 ### Frontend
+
+On this Windows checkout, start MongoDB, FastAPI, and Next.js together:
+
+```powershell
+.\start-dev.ps1
+```
+
+The script reuses running services, checks database and API readiness through
+the frontend proxy, and stores logs in `.cache/logs`. It uses `backend/.venv`
+or the working `.venv-ml-run` environment and a project-local MongoDB binary
+under `.cache/tools/mongodb` when available. MongoDB binds to loopback and
+stores development data in `.cache/mongodb-data`. On another machine, install
+the prerequisites below or use Docker Compose. MongoDB's official
+[Windows ZIP installation guide](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows-zip/)
+describes the portable server setup.
 
 ```powershell
 cd frontend
@@ -56,7 +71,7 @@ Open <http://localhost:3000>. For validation, run `npm run typecheck` and
 
 ```powershell
 cd backend
-py -3.11 -m venv .venv
+python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
@@ -74,8 +89,14 @@ collections during startup. API health and interactive docs are available at
 
 ### Frontend API configuration
 
-`frontend/.env.example` defaults to `http://localhost:8000/api`. Copy it to
-`frontend/.env.local` if the backend uses a different address. Authentication
+The frontend defaults to `/api`; Next.js proxies requests to FastAPI at
+`http://127.0.0.1:8000`, including login cookies and protected clothing images.
+Copy `frontend/.env.example` to `frontend/.env.local` and change
+`WARDROBE_API_ORIGIN` if the backend uses a different address. Keep
+`NEXT_PUBLIC_API_URL=/api` for this same-origin connection. Restart Next.js
+after changing environment variables. Development and production use separate
+build folders, so production builds do not overwrite the running dev server.
+Authentication
 uses an HTTP-only, SameSite=Lax session cookie; the JWT is not exposed to
 browser JavaScript.
 
@@ -170,14 +191,14 @@ same API calls can be performed in the frontend at `/register` and
 From the repository root, using the backend environment:
 
 ```powershell
-.\backend\.venv313\Scripts\python.exe .\ml\src\train_clothing_classifier.py
+.\backend\.venv\Scripts\python.exe .\ml\src\train_clothing_classifier.py
 ```
 
 Training downloads Fashion-MNIST and the official pretrained MobileNetV2 weights
 if they are not cached yet. For a quick smoke run on a smaller training subset:
 
 ```powershell
-.\backend\.venv313\Scripts\python.exe .\ml\src\train_clothing_classifier.py --max-train-samples 3000 --epochs 1
+.\backend\.venv\Scripts\python.exe .\ml\src\train_clothing_classifier.py --max-train-samples 3000 --epochs 1
 ```
 
 Use the full default dataset run for reported baseline metrics. To retrain for
@@ -236,6 +257,11 @@ confusion matrix; the complete metrics are also written to the artifacts folder.
 - Scoring combines compatibility by occasion, temperature/condition fit,
   user-preference boosts or penalties, and color harmony rules.
 - Each recommendation includes a score and a breakdown of why it ranks highly.
+- The planner's **Build around this piece** control keeps a chosen wardrobe item
+  in every suggestion, including footwear, outerwear, or an accessory. It uses
+  the optional `required_item_id` request field and checks account ownership.
+- Temperature is validated locally between −30°C and 60°C. Changing controls
+  cancels older requests so late responses cannot replace the latest looks.
 - The recommendation logic is isolated in a service module and covered by
   unit tests for the scoring helpers.
 
@@ -256,7 +282,8 @@ confusion matrix; the complete metrics are also written to the artifacts folder.
 Invoke-RestMethod "http://localhost:8000/api/outfits/styling-tips" `
   -Method Post `
   -ContentType "application/json" `
-  -Body '{"occasion":"formal","weather":{"temperature":22,"condition":"clear"},"items":[{"category":"top","name":"white shirt"},{"category":"bottom","name":"navy trousers"}]}'
+  -WebSession $session `
+  -Body '{"occasion":"formal","weather":{"temperature_c":22,"condition":"sunny"},"items":[{"id":"shirt","category":"top","name":"white shirt"},{"id":"trousers","category":"bottom","name":"navy trousers"}]}'
 ```
 
 ## Phase 8: outfit customization and saved outfits
@@ -265,7 +292,51 @@ Invoke-RestMethod "http://localhost:8000/api/outfits/styling-tips" `
   toggling, and deletion.
 - The frontend Outfit Planner supports swap-in alternatives for each item slot,
   allowing users to build custom combinations from the wardrobe before saving.
+- Its live outfit preview shows the selected pieces together and updates after
+  each swap. Saving keeps the occasion associated with the customized look.
 - Saved outfits are linked to the current user and remain isolated by account.
+
+### Saved collections and personal profiles
+
+- `/saved-outfits` searches outfit names, notes, and pieces; filters by occasion
+  and favorites; and sorts by name, creation time, update time, or favorites.
+- Its editor updates every outfit field and supports up to 12 pieces, including
+  multiple accessories, with a live preview. Duplicate a look to create a new
+  variation. A calendar link preselects that look for scheduling.
+- Cards flag laundry and removed clothing. Missing pieces must be replaced or
+  removed before a full edit or duplication. Outfit deletion asks for confirmation
+  and preserves wardrobe items, existing wear records, and trip snapshots.
+- `/profile` saves a display name, home city, and style bio. The city prefills the
+  planner's weather search. Wardrobe, favorite, laundry, wear, and trip totals link
+  to the corresponding sections, alongside saved preference summaries.
+- Password changes verify the current password, rotate the session version, and
+  refresh the current session while invalidating other signed-in sessions.
+- Download account data as JSON from Profile. The authenticated export includes
+  owned metadata and preferences, without credentials, storage paths, or photos.
+- Saved outfit creation and clothing edits validate wardrobe ownership and use
+  current item metadata. Account fields are compatible with existing users.
+
+### Calendar, wear history, trips, and live weather
+
+- `/calendar` plans one saved outfit per local calendar day. Explicitly marking
+  a look **Worn** records wear history and per-piece wear counts; scheduling alone
+  does not count as wearing. Repeating the action updates the same day.
+- Wardrobe cards can move pieces into **Laundry** and mark them available again.
+  Outfit suggestions exclude laundry items. Calendar plans can still include a
+  piece for a future date, and trip checklists flag laundry items before packing.
+- `/trips` creates dated packing lists from saved outfits, counting shared pieces
+  once. Packed checkboxes persist in MongoDB. Editing the outfits retains checked
+  items that remain in the list; a text checklist can be downloaded.
+- The Outfit Planner searches a city and applies current temperature/conditions
+  using [Open-Meteo](https://open-meteo.com/en/docs). It needs internet access;
+  provider errors leave the manual weather controls available. No API key is
+  required for this development integration.
+- The account menu links Profile and Preferences. Dashboard shortcuts connect
+  collecting clothes, preferences, planning, saving, scheduling, and packing.
+
+Calendar entries and trips are isolated by account; writes validate outfit and
+clothing ownership. Calendar and trip data persist in the `outfit_calendar` and
+`trips` MongoDB collections, initialized automatically when the backend starts.
 
 ### Saved outfit smoke test
 
@@ -277,7 +348,8 @@ Invoke-RestMethod http://localhost:8000/api/outfits -Method Get -WebSession $ses
 
 ## Phase 9: frontend polish
 
-The application includes a polished landing experience, dashboard, wardrobe grid,
+The application opens with a letter-by-letter Thread intro that proceeds directly
+to registration, and includes a dashboard, wardrobe grid,
 profile page, saved-outfits page, and planner workflow with loading states,
 empty states, toast feedback, and mobile-responsive layouts.
 
@@ -297,7 +369,7 @@ This phase secures project quality, operational readiness, and maintainability.
 
 ```powershell
 cd backend
-.\.venv313\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m pytest -q
 
 cd ..\frontend
 npm test
@@ -316,6 +388,12 @@ This brings up:
 - MongoDB on `localhost:27017`
 - FastAPI backend on `localhost:8000`
 - Next.js frontend on `localhost:3000`
+
+Compose loads the signing secret and optional Gemini key from `backend/.env`.
+Set a secure `JWT_SECRET_KEY` there before starting the containers. The frontend
+uses the same-origin `/api` proxy, and uploaded images persist in a Docker volume.
+The backend image includes `ml/`; classification requires the generated weights
+to be present in `ml/artifacts/` before building the image.
 
 Validate the system with:
 

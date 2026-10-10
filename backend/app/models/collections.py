@@ -5,4 +5,6 @@ COLLECTION_NAMES: tuple[str, ...] = (
     "clothing_items",
     "outfits",
     "preferences",
+    "outfit_calendar",
+    "trips",
 )

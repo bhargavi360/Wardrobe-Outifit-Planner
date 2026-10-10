@@ -928,7 +928,7 @@ body {
 .wardrobe-upload-prompt b {
   color: var(--thread-gold);
   font-size: 28px;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .wardrobe-upload-prompt small {
@@ -1039,7 +1039,7 @@ body {
 }
 
 body {
-  font-weight: 300;
+  font-weight: 400;
 }
 
 button,
@@ -1066,7 +1066,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-sans), sans-serif;
   font-size: 14px;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .app-shell-inner {
@@ -1160,7 +1160,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.5rem, 5.5vw, 5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 1.02;
 }
@@ -1174,7 +1174,7 @@ textarea:focus-visible {
   color: var(--thread-gold-soft);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: 31px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.055em;
 }
 
@@ -1202,7 +1202,7 @@ textarea:focus-visible {
   background: transparent;
   color: #80666a;
   font-size: 10px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
@@ -1250,7 +1250,7 @@ textarea:focus-visible {
   background: transparent;
   color: var(--thread-gold-soft);
   font-size: 10px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1266,7 +1266,7 @@ textarea:focus-visible {
 .app-shell h3 {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
 }
 
@@ -1457,7 +1457,7 @@ textarea:focus-visible {
   color: var(--thread-gold-soft);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(5rem, 16vw, 13rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.075em;
   line-height: 0.82;
   text-decoration: none;
@@ -1688,7 +1688,7 @@ textarea:focus-visible {
   color: #702b3b;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(5rem, 22vw, 18rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.075em;
   line-height: 1;
   text-decoration: none;
@@ -1791,7 +1791,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: 38px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.05em;
 }
 
@@ -1802,7 +1802,7 @@ textarea:focus-visible {
 .auth-eyebrow {
   color: var(--thread-gold);
   font-size: 10px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.24em;
 }
 
@@ -1812,7 +1812,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.5rem, 6vw, 3.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
 }
 
@@ -1821,12 +1821,12 @@ textarea:focus-visible {
 .auth-gate-card p,
 .preferences-intro {
   color: var(--thread-muted);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .auth-field {
   color: #55494c;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .auth-field input,
@@ -1910,7 +1910,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: 25px;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .preference-heading p {
@@ -1981,7 +1981,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-sans), sans-serif;
   font-size: 14px;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .landing-page a {
@@ -2017,7 +2017,7 @@ textarea:focus-visible {
   border-bottom: 1px solid rgba(170, 111, 120, 0.34);
   color: var(--thread-gold);
   font-size: 10px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.2em;
   text-align: center;
   text-transform: uppercase;
@@ -2056,7 +2056,7 @@ textarea:focus-visible {
   justify-self: start;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: 31px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.055em;
   line-height: 1;
 }
@@ -2077,7 +2077,7 @@ textarea:focus-visible {
   padding: 11px 0;
   color: var(--thread-muted);
   font-size: 10px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.17em;
   text-transform: uppercase;
   transition: color 0.65s var(--thread-ease);
@@ -2137,7 +2137,7 @@ textarea:focus-visible {
   color: var(--thread-gold);
   font-family: var(--font-thread-sans), sans-serif;
   font-size: 11px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.28em;
   line-height: 1.5;
   text-transform: uppercase;
@@ -2148,7 +2148,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(3.2rem, 7.5vw, 7.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.035em;
   line-height: 0.98;
 }
@@ -2172,7 +2172,7 @@ textarea:focus-visible {
   margin-top: 26px;
   color: var(--thread-muted);
   font-size: 14px;
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.9;
 }
 
@@ -2294,7 +2294,7 @@ textarea:focus-visible {
   gap: 14px;
   color: var(--thread-text);
   font-size: 9px;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -2432,7 +2432,7 @@ textarea:focus-visible {
   margin-top: 20px;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(3.5rem, 7vw, 6.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
   line-height: 1.02;
 }
@@ -2441,7 +2441,7 @@ textarea:focus-visible {
   color: #171314;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(3.5rem, 7vw, 6.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
   line-height: 1.02;
 }
@@ -2456,7 +2456,7 @@ textarea:focus-visible {
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: inherit;
   font-style: italic;
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: inherit;
   line-height: inherit;
   opacity: 1;
@@ -2547,7 +2547,7 @@ textarea:focus-visible {
   margin-top: 14px;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.2rem, 4.5vw, 4rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
   line-height: 1.05;
 }
@@ -2656,7 +2656,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.4rem, 5vw, 5rem);
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.05;
 }
 
@@ -2717,14 +2717,14 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(3rem, 7vw, 6.6rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.04em;
   line-height: 0.98;
 }
 
 .planner-daily-editorial-copy :is(h1, h2) em {
   color: var(--thread-gold-soft);
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .planner-daily-editorial-copy > p:not(.planner-editorial-kicker) {
@@ -2815,14 +2815,14 @@ textarea:focus-visible {
   color: var(--thread-background);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.4rem, 5vw, 5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
   line-height: 1.05;
 }
 
 .dashboard-next-editorial-copy h2 em {
   color: #e7bdc0;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .dashboard-next-editorial-copy .planner-editorial-kicker {
@@ -2894,7 +2894,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.5rem, 5vw, 4.8rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
@@ -2983,7 +2983,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(1.6rem, 2.8vw, 2.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.02em;
 }
 
@@ -3047,14 +3047,14 @@ textarea:focus-visible {
   color: var(--thread-background);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.6rem, 5vw, 5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
 .dashboard-afterglow-copy h2 em {
   color: #e7bdc0;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .dashboard-fashion-section {
@@ -3088,7 +3088,7 @@ textarea:focus-visible {
   color: var(--thread-text);
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2.2rem, 3.8vw, 3.5rem);
-  font-weight: 300;
+  font-weight: 400;
   letter-spacing: -0.025em;
 }
 
@@ -3148,7 +3148,7 @@ textarea:focus-visible {
   margin-top: 15px;
   font-family: var(--font-thread-serif), Georgia, serif;
   font-size: clamp(2rem, 4vw, 3.6rem);
-  font-weight: 300;
+  font-weight: 400;
   line-height: 1.05;
 }
 

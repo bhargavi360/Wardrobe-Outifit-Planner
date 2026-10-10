@@ -272,10 +272,13 @@ def _candidate_from_items(
             {"label": label, "score": 0.0} for label in preference_reasons
         )
 
-    if occasion.value in {
+    preferred_styles = {
         str(style).strip().casefold()
         for style in preferences.get("preferred_styles", [])
-    }:
+    }
+    if occasion.value in preferred_styles or (
+        occasion == OccasionType.GYM and "sporty" in preferred_styles
+    ):
         reasons.append(
             {
                 "label": f"matches preferred style: {occasion.value}",
@@ -338,12 +341,16 @@ def build_candidate_outfits(
     temperature_c: float,
     condition: WeatherCondition,
     preferences: dict[str, Any] | None = None,
+    required_item_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Build and rank distinct outfit combinations from wardrobe items."""
     prefs = preferences or {}
     by_category: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    allowed_categories = {"top", "bottom", "dress", "outerwear", "footwear"}
+    allowed_categories = {"top", "bottom", "dress", "outerwear", "footwear", "accessory"}
+    required_item = None
     for index, original_item in enumerate(wardrobe_items):
+        if original_item.get("availability", "available") != "available":
+            continue
         category = str(original_item.get("category", "")).casefold()
         if category not in allowed_categories:
             continue
@@ -354,38 +361,50 @@ def build_candidate_outfits(
             str(item.get("_id", item.get("id", f"wardrobe-{index}"))),
         )
         by_category[category].append(item)
+        if _item_identity(item) == required_item_id:
+            required_item = item
 
-    tops = _shortlist(
-        by_category["top"], occasion, temperature_c, condition, prefs, _MAX_ITEMS_PER_CATEGORY
-    )
-    bottoms = _shortlist(
-        by_category["bottom"], occasion, temperature_c, condition, prefs, _MAX_ITEMS_PER_CATEGORY
-    )
-    dresses = _shortlist(
-        by_category["dress"], occasion, temperature_c, condition, prefs, _MAX_ITEMS_PER_CATEGORY
-    )
-    footwear = _shortlist(
-        by_category["footwear"], occasion, temperature_c, condition, prefs, _MAX_FOOTWEAR_OPTIONS
-    )
+    if required_item_id is not None and required_item is None:
+        return []
+
+    def shortlist(category: str, limit: int) -> list[dict[str, Any]]:
+        if required_item is not None and required_item["category"] == category:
+            return [required_item]
+        return _shortlist(
+            by_category[category], occasion, temperature_c, condition, prefs, limit
+        )
+
+    tops = shortlist("top", _MAX_ITEMS_PER_CATEGORY)
+    bottoms = shortlist("bottom", _MAX_ITEMS_PER_CATEGORY)
+    dresses = shortlist("dress", _MAX_ITEMS_PER_CATEGORY)
+    footwear = shortlist("footwear", _MAX_FOOTWEAR_OPTIONS)
+    if required_item is not None:
+        if required_item["category"] in {"top", "bottom"}:
+            dresses = []
+        elif required_item["category"] == "dress":
+            tops = []
+            bottoms = []
     should_layer = (
         temperature_c <= 18
         or condition in {WeatherCondition.COLD, WeatherCondition.WINDY, WeatherCondition.RAINY}
+        or (required_item is not None and required_item["category"] == "outerwear")
     )
     outerwear = (
-        _shortlist(
-            by_category["outerwear"],
-            occasion,
-            temperature_c,
-            condition,
-            prefs,
-            _MAX_OUTERWEAR_OPTIONS,
-        )
+        shortlist("outerwear", _MAX_OUTERWEAR_OPTIONS)
         if should_layer
         else []
     )
     footwear_options: list[dict[str, Any] | None] = [None, *footwear]
     outerwear_options: list[dict[str, Any] | None] = [None, *outerwear]
-    selected_items = tops + bottoms + dresses + outerwear + footwear
+    accessory = []
+    if required_item is not None:
+        if required_item["category"] == "footwear":
+            footwear_options = [required_item]
+        elif required_item["category"] == "outerwear":
+            outerwear_options = [required_item]
+        elif required_item["category"] == "accessory":
+            accessory = [required_item]
+    selected_items = tops + bottoms + dresses + outerwear + footwear + accessory
     item_metrics = {
         _item_identity(item): (
             _occasion_score(occasion, item),
@@ -399,7 +418,7 @@ def build_candidate_outfits(
 
     for dress in dresses:
         for layer, shoes in product(outerwear_options, footwear_options):
-            outfit = [dress]
+            outfit = [dress, *accessory]
             if layer is not None:
                 outfit.append(layer)
             if shoes is not None:
@@ -416,7 +435,7 @@ def build_candidate_outfits(
 
     for top, bottom in product(tops, bottoms):
         for layer, shoes in product(outerwear_options, footwear_options):
-            outfit = [top, bottom]
+            outfit = [top, bottom, *accessory]
             if layer is not None:
                 outfit.append(layer)
             if shoes is not None:
@@ -458,6 +477,7 @@ def recommend_outfits(
     temperature_c: float,
     condition: WeatherCondition,
     preferences: dict[str, Any] | None = None,
+    required_item_id: str | None = None,
 ) -> list[dict[str, Any]]:
     """Return up to five ranked outfits with score explanations."""
     candidates = build_candidate_outfits(
@@ -466,6 +486,7 @@ def recommend_outfits(
         temperature_c,
         condition,
         preferences,
+        required_item_id,
     )
     recommendations = []
     for rank, candidate in enumerate(candidates, start=1):

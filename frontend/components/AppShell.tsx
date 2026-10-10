@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '../app/providers';
 
 const navItems = [
@@ -10,7 +11,8 @@ const navItems = [
   { href: '/wardrobe', label: 'Wardrobe' },
   { href: '/outfit-planner', label: 'Outfit Planner' },
   { href: '/saved-outfits', label: 'Saved Outfits' },
-  { href: '/profile', label: 'Profile' },
+  { href: '/calendar', label: 'Calendar' },
+  { href: '/trips', label: 'Trips' },
 ] as const;
 
 const editorialBanners: Record<string, { image: string; alt: string; title: string }> = {
@@ -39,6 +41,8 @@ const editorialBanners: Record<string, { image: string; alt: string; title: stri
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const [signOutError, setSignOutError] = useState('');
+  const [signingOut, setSigningOut] = useState(false);
   const editorialBanner = editorialBanners[pathname];
 
   return (
@@ -70,22 +74,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-3 lg:justify-end">
-              <Link
-                href="/profile"
-                className="app-member hidden border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-600 sm:block"
-              >
-                You
-              </Link>
+              <details className="thread-account"><summary>Account</summary><div><Link href="/profile">Profile</Link><Link href="/preferences">Preferences</Link></div></details>
               <button
                 type="button"
-                onClick={() => void signOut()}
+                disabled={signingOut}
+                onClick={async () => { setSigningOut(true); setSignOutError(''); try { await signOut(); } catch (cause) { setSignOutError(cause instanceof Error ? cause.message : 'Could not sign out. Try again.'); } finally { setSigningOut(false); } }}
                 className="app-signout border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
               >
-                Sign out
+                {signingOut ? 'Signing out…' : 'Sign out'}
               </button>
             </div>
           </div>
         </header>
+        {signOutError && <p role="alert" className="thread-error">{signOutError}</p>}
 
         {editorialBanner ? (
           <section
@@ -114,6 +115,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link href="/dashboard#dashboard-edit">The edit</Link>
               <Link href="/outfit-planner">Outfit planner</Link>
               <Link href="/wardrobe">Wardrobe</Link>
+              <Link href="/calendar">Calendar & wear history</Link>
+              <Link href="/trips">Trip packing lists</Link>
             </div>
             <div>
               <span className="app-footer-heading">Your account</span>
@@ -123,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <span className="app-footer-heading">Thread</span>
-              <Link href="/">About Thread</Link>
+              <Link href="/dashboard">Your dashboard</Link>
               <a href="mailto:kandulabhargavi36@gmail.com">Reach out: kandulabhargavi36@gmail.com</a>
             </div>
           </div>

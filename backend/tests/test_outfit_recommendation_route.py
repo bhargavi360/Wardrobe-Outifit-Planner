@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
+from fastapi import HTTPException
 
 from app.routers import outfits
 from app.schemas.outfit_recommendation import OutfitRecommendationRequest
@@ -13,7 +14,7 @@ class _Cursor:
     def __init__(self, documents: list[dict[str, Any]]) -> None:
         self.documents = documents
 
-    async def to_list(self, length: int) -> list[dict[str, Any]]:
+    async def to_list(self, length: int | None) -> list[dict[str, Any]]:
         return self.documents[:length]
 
 
@@ -84,3 +85,23 @@ def test_recommendation_route_uses_saved_preferences_and_user_wardrobe(
         "favorite color: red" in reason.label
         for reason in response.recommendations[0].reasons
     )
+
+
+def test_required_piece_is_validated_against_owned_wardrobe(monkeypatch: pytest.MonkeyPatch) -> None:
+    clothing_items = _Collection(documents=[
+        {"_id": "owned", "name": "Dress", "category": "dress"},
+    ])
+    database = _Database({"clothing_items": clothing_items, "preferences": _Collection()})
+    monkeypatch.setattr(outfits, "get_database", lambda: database)
+    payload = {"occasion": "casual", "weather": {"temperature_c": 22}, "required_item_id": "owned"}
+    response = asyncio.run(outfits.recommend_wardrobe_outfits(
+        OutfitRecommendationRequest.model_validate(payload), {"_id": "user-42"},
+    ))
+    assert response.recommendations[0].items[0].id == "owned"
+    assert clothing_items.find_query == {"user_id": "user-42"}
+    payload["required_item_id"] = "someone-elses-piece"
+    with pytest.raises(HTTPException) as failure:
+        asyncio.run(outfits.recommend_wardrobe_outfits(
+            OutfitRecommendationRequest.model_validate(payload), {"_id": "user-42"},
+        ))
+    assert failure.value.status_code == 404

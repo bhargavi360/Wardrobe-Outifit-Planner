@@ -12,7 +12,7 @@ matrix.
 From the repository root, run with the backend Python environment:
 
 ```powershell
-.\backend\.venv313\Scripts\python.exe .\ml\src\train_clothing_classifier.py
+.\backend\.venv\Scripts\python.exe .\ml\src\train_clothing_classifier.py
 ```
 
 The script downloads the Fashion-MNIST data and pretrained MobileNetV2 weights

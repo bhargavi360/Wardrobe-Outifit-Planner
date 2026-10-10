@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     uploads_dir: Path = BACKEND_ROOT / "uploads"
     gemini_api_key: SecretStr = SecretStr("")
     gemini_model: str = "gemini-2.5-flash"
+
+    @field_validator("uploads_dir")
+    @classmethod
+    def resolve_uploads_dir(cls, value: Path) -> Path:
+        return value if value.is_absolute() else BACKEND_ROOT / value
 
 
 settings = Settings()

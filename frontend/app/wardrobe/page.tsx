@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { AppShell } from '../../components/AppShell';
 import { ImageLightbox } from '../../components/ImageZoom';
 import { useToast } from '../../components/ToastProvider';
-import { apiRequest, API_URL } from '../../lib/api';
+import { apiRequest, apiImageUrl, fetchWardrobe } from '../../lib/api';
 
 type ClothingCategory = 'top' | 'bottom' | 'dress' | 'outerwear' | 'footwear' | 'accessory';
 type ClothingSeason = 'spring' | 'summer' | 'autumn' | 'winter' | 'all-season';
@@ -25,6 +25,7 @@ type WardrobeItem = {
   pattern: 'solid' | 'striped' | 'checked' | 'unknown' | null;
   sleeve_length: 'short' | 'long' | 'unknown' | null;
   attribute_summary: string | null;
+  availability: 'available' | 'laundry';
 };
 
 type WardrobeForm = {
@@ -75,10 +76,6 @@ function splitTags(value: string): string[] {
   return [...new Set(value.split(',').map((entry) => entry.trim()).filter(Boolean))];
 }
 
-function imageSource(imageUrl: string): string {
-  return new URL(imageUrl, `${API_URL}/`).toString();
-}
-
 export default function WardrobePage() {
   const showToast = useToast();
   const [items, setItems] = useState<WardrobeItem[]>([]);
@@ -93,6 +90,7 @@ export default function WardrobePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [availabilityBusyId, setAvailabilityBusyId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,7 +119,7 @@ export default function WardrobePage() {
     const loadWardrobe = async () => {
       try {
         setLoading(true);
-        const wardrobe = await apiRequest<WardrobeItem[]>('/wardrobe');
+        const wardrobe = await fetchWardrobe<WardrobeItem>();
         setItems(wardrobe);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : 'Unable to load your wardrobe.');
@@ -243,7 +241,7 @@ export default function WardrobePage() {
 
   const lightboxItems = useMemo(
     () => filteredItems.map((item) => ({
-      src: imageSource(item.image_url),
+      src: apiImageUrl(item.image_url),
       alt: item.name,
       title: item.name,
       subtitle: `${categoryLabels[item.category]} · ${item.sub_type ?? 'Wardrobe piece'}`,
@@ -361,6 +359,16 @@ export default function WardrobePage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleAvailability = async (item: WardrobeItem) => {
+    setAvailabilityBusyId(item.id); setError('');
+    try {
+      const updated = await apiRequest<WardrobeItem>(`/wardrobe/${item.id}`, { method: 'PATCH', body: JSON.stringify({ availability: item.availability === 'laundry' ? 'available' : 'laundry' }) });
+      setItems(current => current.map(value => value.id === item.id ? { ...updated, image_url: apiImageUrl(updated.image_url) } : value));
+      showToast(updated.availability === 'laundry' ? 'In the laundry. Excluded from outfit suggestions.' : 'Ready to wear again.');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not update availability.'); }
+    finally { setAvailabilityBusyId(null); }
   };
 
   const deleteItem = async (item: WardrobeItem) => {
@@ -520,7 +528,7 @@ export default function WardrobePage() {
                   aria-label={`View ${item.name}`}
                 >
                   <Image
-                    src={imageSource(item.image_url)}
+                    src={apiImageUrl(item.image_url)}
                     alt={item.name}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -573,6 +581,9 @@ export default function WardrobePage() {
                     Added {new Date(item.created_at).toLocaleDateString()}
                   </p>
                   <div className="wardrobe-item-actions">
+                    <button type="button" className="wardrobe-laundry-toggle" onClick={() => void toggleAvailability(item)} disabled={availabilityBusyId !== null} aria-label={`${item.availability === 'laundry' ? 'Mark available' : 'Put in laundry'}: ${item.name}`}>
+                      {availabilityBusyId === item.id ? 'Updating…' : item.availability === 'laundry' ? 'In laundry · Mark available' : 'Ready to wear · Put in laundry'}
+                    </button>
                     <button type="button" onClick={() => openEditModal(item)}>Edit details</button>
                     <button
                       type="button"

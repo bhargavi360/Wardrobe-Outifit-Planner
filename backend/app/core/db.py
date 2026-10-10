@@ -32,6 +32,8 @@ async def connect_to_mongo() -> None:
         await database["clothing_items"].create_index(
             [("user_id", 1), ("created_at", -1)]
         )
+        await database["outfit_calendar"].create_index([("user_id", 1), ("date", 1)], unique=True)
+        await database["trips"].create_index([("user_id", 1), ("start_date", -1)])
     except PyMongoError:
         client.close()
         raise

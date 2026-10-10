@@ -48,4 +48,6 @@ async def get_current_user(request: Request) -> dict[str, Any]:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="This account no longer exists. Please sign in again.",
         )
+    if payload.get("version", 0) != user.get("session_version", 0):
+        raise HTTPException(401, "Your password has changed. Please sign in again.")
     return user

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Literal
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -66,3 +67,5 @@ class SavedOutfitResponse(BaseModel):
     items: list[SavedOutfitItem]
     notes: str
     is_favorite: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None

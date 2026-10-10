@@ -69,6 +69,7 @@ def _to_item_response(document: dict[str, Any]) -> WardrobeItemResponse:
         pattern=document.get("pattern"),
         sleeve_length=document.get("sleeve_length"),
         attribute_summary=document.get("attribute_summary"),
+        availability=document.get("availability", "available"),
     )
 
 

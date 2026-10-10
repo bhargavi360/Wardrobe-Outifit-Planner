@@ -16,6 +16,9 @@ export type User = {
   id: string;
   email: string;
   created_at: string;
+  display_name?: string;
+  city?: string;
+  bio?: string;
 };
 
 type AuthStatus = "checking" | "authenticated" | "anonymous" | "unavailable";
@@ -42,12 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    if (publicPaths.has(pathname)) {
-      setStatus("anonymous");
-      setError("");
-      return;
-    }
-
     let cancelled = false;
     setStatus("checking");
     setError("");

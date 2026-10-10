@@ -43,6 +43,9 @@ def test_create_saved_outfit_uses_authenticated_user(
         return document
 
     monkeypatch.setattr(saved_outfits, "create_saved_outfit", fake_create)
+    async def fake_owned_items(user_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return items
+    monkeypatch.setattr(saved_outfits, "owned_items", fake_owned_items)
     payload = SavedOutfitCreate.model_validate(
         {
             "name": "Weekend look",

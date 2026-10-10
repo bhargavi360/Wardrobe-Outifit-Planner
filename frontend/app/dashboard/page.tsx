@@ -115,6 +115,17 @@ export default function DashboardDetailsPage() {
           </div>
         </section>
 
+        <section className="thread-journey" aria-labelledby="thread-journey-title">
+          <div className="thread-page-heading"><p>Everything has its place</p><h2 id="thread-journey-title">A wardrobe that works with you.</h2></div>
+          <div>{[
+            { href: '/wardrobe', title: 'Collect your pieces', text: 'Add clothes and manage what is ready to wear.' },
+            { href: '/preferences', title: 'Find your signature', text: 'Set your colors, styles, and personal preferences.' },
+            { href: '/outfit-planner', title: 'Bring a look together', text: 'Match your pieces to the occasion and weather.' },
+            { href: '/saved-outfits', title: 'Keep your favorites', text: 'Save, refine, and revisit your best combinations.' },
+            { href: '/calendar', title: 'Make room for the week', text: 'Plan your days and remember what you wore.' },
+            { href: '/trips', title: 'Take your style along', text: 'Turn your saved looks into a simple packing list.' },
+          ].map((step, index) => <Link key={step.href} href={step.href}><span>0{index + 1} ↗</span><h3>{step.title}</h3><p>{step.text}</p></Link>)}</div>
+        </section>
         <section className="dashboard-lookbook" id="dashboard-edit" aria-labelledby="dashboard-lookbook-title">
           <div className="dashboard-lookbook-heading">
             <div>
@@ -144,7 +155,7 @@ export default function DashboardDetailsPage() {
                     src={look.image}
                     alt={look.alt}
                     fill
-                    sizes="(max-width: 767px) 100vw, 68vw"
+                    sizes="(max-width: 767px) 86vw, (max-width: 1199px) 40vw, 466px"
                   />
                 </div>
               </motion.figure>

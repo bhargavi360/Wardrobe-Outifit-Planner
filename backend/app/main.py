@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from pymongo.errors import PyMongoError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
@@ -17,6 +19,8 @@ from app.routers.preferences import router as preferences_router
 from app.routers.saved_outfits import router as saved_outfits_router
 from app.routers.styling import router as styling_router
 from app.routers.wardrobe import router as wardrobe_router
+from app.routers.planning import router as planning_router
+from app.routers.weather import router as weather_router
 
 
 @asynccontextmanager
@@ -52,3 +56,10 @@ app.include_router(outfits_router, prefix=settings.api_prefix)
 app.include_router(saved_outfits_router, prefix=settings.api_prefix)
 app.include_router(styling_router, prefix=settings.api_prefix)
 app.include_router(wardrobe_router, prefix=settings.api_prefix)
+app.include_router(planning_router, prefix=settings.api_prefix)
+app.include_router(weather_router, prefix=settings.api_prefix)
+
+
+@app.exception_handler(PyMongoError)
+async def database_unavailable(_, __):
+    return JSONResponse(status_code=503, content={"detail": "Your data is temporarily unavailable. Please try again."})

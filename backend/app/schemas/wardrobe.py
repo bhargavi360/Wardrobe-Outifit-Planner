@@ -90,6 +90,7 @@ class WardrobeItemUpdate(BaseModel):
         max_length=10,
     )
     user_notes: Annotated[str, Field(max_length=1000)] | None = None
+    availability: Literal["available", "laundry"] | None = None
 
     @model_validator(mode="after")
     def reject_null_required_values(self) -> "WardrobeItemUpdate":
@@ -100,6 +101,7 @@ class WardrobeItemUpdate(BaseModel):
             "season",
             "occasion_tags",
             "user_notes",
+            "availability",
         ):
             if field_name in self.model_fields_set and getattr(self, field_name) is None:
                 raise ValueError(f"{field_name} cannot be null.")
@@ -136,3 +138,4 @@ class WardrobeItemResponse(BaseModel):
     pattern: Literal["solid", "striped", "checked", "unknown"] | None = None
     sleeve_length: Literal["short", "long", "unknown"] | None = None
     attribute_summary: str | None = None
+    availability: Literal["available", "laundry"] = "available"

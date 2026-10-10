@@ -1,6 +1,28 @@
 export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"
+  process.env.NEXT_PUBLIC_API_URL ?? "/api"
 ).replace(/\/+$/, "");
+
+export function apiImageUrl(imageUrl: string): string {
+  if (/^https?:\/\//i.test(API_URL)) {
+    return new URL(imageUrl, `${API_URL}/`).toString();
+  }
+  if (imageUrl.startsWith("/") || /^https?:\/\//i.test(imageUrl)) {
+    return imageUrl;
+  }
+  return `${API_URL}/${imageUrl}`;
+}
+
+export async function fetchWardrobe<T>(): Promise<T[]> {
+  const items: T[] = [];
+  const pageSize = 100;
+  while (true) {
+    const page = await apiRequest<T[]>(
+      `/wardrobe?skip=${items.length}&limit=${pageSize}`,
+    );
+    items.push(...page);
+    if (page.length < pageSize) return items;
+  }
+}
 
 export class ApiError extends Error {
   constructor(
@@ -48,6 +70,15 @@ export async function apiRequest<T>(
     : null;
 
   if (!response.ok) {
+    if (
+      response.status === 502 || response.status === 504 ||
+      (response.status === 500 && !contentType.includes("application/json"))
+    ) {
+      throw new ApiError(
+        "The API connection failed. Start the backend and MongoDB, then try again.",
+        response.status,
+      );
+    }
     const detail =
       typeof body === "object" &&
       body !== null &&

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { AuthLayout } from "../../components/AuthLayout";
 import { apiRequest } from "../../lib/api";
 import { useAuth, type User } from "../providers";
 
@@ -43,13 +44,11 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="auth-page">
-      <section className="auth-card">
-        <Link className="auth-brand" href="/">Thread<span>.</span></Link>
+    <AuthLayout mode="register">
         <p className="auth-eyebrow">A LITTLE MORE LOVELY</p>
         <h1>Make room for you.</h1>
         <p className="auth-description">Create an account to start building a wardrobe that feels like yours.</p>
-        <form className="auth-form" onSubmit={handleSubmit}>
+        <form className="auth-form" onSubmit={handleSubmit} aria-busy={submitting}>
           <label className="auth-field">
             Email address
             <input
@@ -58,6 +57,7 @@ export default function RegisterPage() {
               autoComplete="email"
               required
               maxLength={254}
+              placeholder="you@example.com"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
@@ -71,6 +71,7 @@ export default function RegisterPage() {
               required
               minLength={8}
               maxLength={72}
+              placeholder="At least 8 characters"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
           />
@@ -84,6 +85,7 @@ export default function RegisterPage() {
               required
               minLength={8}
               maxLength={72}
+              placeholder="Repeat your password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
             />
@@ -95,8 +97,6 @@ export default function RegisterPage() {
           </button>
         </form>
         <p className="auth-switch">Already part of Thread? <Link href="/login">Sign in</Link></p>
-        <Link className="auth-back" href="/">Back to the wardrobe</Link>
-      </section>
-    </main>
+    </AuthLayout>
   );
 }

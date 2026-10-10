@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pymongo.errors import PyMongoError
 
 from app.core.auth import get_current_user
+from app.core.db import get_database
 from app.schemas.saved_outfit import (
     SavedOutfitCreate,
     SavedOutfitResponse,
@@ -23,6 +24,23 @@ router = APIRouter(prefix="/outfits", tags=["saved_outfits"])
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
 
+async def owned_items(user_id: str, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Use current wardrobe metadata and reject missing, foreign, or repeated pieces."""
+    ids = [item["item_id"] for item in items]
+    if len(set(ids)) != len(ids):
+        raise HTTPException(422, "Each wardrobe piece can appear only once in an outfit.")
+    if any(not ObjectId.is_valid(value) for value in ids):
+        raise HTTPException(409, "A piece is no longer in your wardrobe. Remove or replace it before saving.")
+    documents = await get_database()["clothing_items"].find(
+        {"user_id": user_id, "_id": {"$in": [ObjectId(value) for value in ids]}}
+    ).to_list(length=None)
+    by_id = {str(document["_id"]): document for document in documents}
+    if any(value not in by_id for value in ids):
+        raise HTTPException(409, "A piece is no longer in your wardrobe. Remove or replace it before saving.")
+    return [{"item_id": value, "name": by_id[value]["name"], "category": by_id[value]["category"],
+             "dominant_colors": by_id[value].get("dominant_colors", []), "sub_type": by_id[value].get("sub_type")} for value in ids]
+
+
 def _to_response(document: dict[str, Any]) -> SavedOutfitResponse:
     return SavedOutfitResponse(
         id=str(document["_id"]),
@@ -32,6 +50,8 @@ def _to_response(document: dict[str, Any]) -> SavedOutfitResponse:
         items=document.get("items", []),
         notes=document.get("notes", ""),
         is_favorite=bool(document.get("is_favorite", False)),
+        created_at=document.get("created_at"),
+        updated_at=document.get("updated_at"),
     )
 
 
@@ -55,7 +75,9 @@ async def create_outfit(
 ) -> SavedOutfitResponse:
     """Create a saved outfit for the current user."""
     try:
-        document = await create_saved_outfit(str(current_user["_id"]), payload.model_dump(mode="json"))
+        data = payload.model_dump(mode="json")
+        data["items"] = await owned_items(str(current_user["_id"]), data["items"])
+        document = await create_saved_outfit(str(current_user["_id"]), data)
     except PyMongoError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -85,6 +107,8 @@ async def update_outfit(
         )
 
     try:
+        if "items" in updates:
+            updates["items"] = await owned_items(str(current_user["_id"]), updates["items"])
         document = await update_saved_outfit(str(current_user["_id"]), outfit_id, updates)
     except PyMongoError as exc:
         raise HTTPException(

@@ -1,7 +1,15 @@
 **/.git
 **/.venv
+**/.venv*
 **/node_modules
 **/.next
+**/.next*
+**/.cache
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.example
+ml/artifacts/runs
 **/uploads
 **/__pycache__
 **/.pytest_cache
