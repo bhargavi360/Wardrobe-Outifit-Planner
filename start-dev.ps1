@@ -30,6 +30,7 @@ function Wait-Ready([string]$Url, [int]$TimeoutSeconds = 90) {
 
 $pythonCandidates = @(
     (Join-Path $backendRoot '.venv/Scripts/python.exe'),
+    (Join-Path $backendRoot '.venv313/Scripts/python.exe'),
     (Join-Path $projectRoot '.venv-ml-run/Scripts/python.exe')
 )
 $systemPython = Get-Command python -ErrorAction SilentlyContinue
