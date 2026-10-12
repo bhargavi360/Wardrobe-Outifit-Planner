@@ -79,12 +79,12 @@ uvicorn app.main:app --reload
 ```
 
 Set `MONGODB_URI`, optional `MONGODB_MIRROR_URI`, and `JWT_SECRET_KEY` in
-`backend/.env`. For local development, keep `MONGODB_URI=mongodb://localhost:27017`
-and set `MONGODB_MIRROR_URI` to your MongoDB Atlas connection string. The API
-uses the local database as primary, copies its existing records to Atlas during
-startup, and mirrors new writes to both databases. Both connections must be
-available for the API to start and accept writes. Docker Compose uses its local
-MongoDB service as primary and reads the Atlas mirror URI from `backend/.env`.
+`backend/.env`. For local development, set `MONGODB_URI` to your MongoDB Atlas
+connection string and `MONGODB_MIRROR_URI=mongodb://localhost:27017`. Atlas is
+the primary database; startup imports backup-only records into Atlas, refreshes
+the local backup from Atlas, and mirrors new writes to both. Both connections
+must be available for the API to start and accept writes. Docker Compose starts
+the local MongoDB backup service.
 Create a unique signing key with
 `python -c "import secrets; print(secrets.token_urlsafe(48))"` and set it as
 `JWT_SECRET_KEY` in `backend/.env`. The backend refuses to start with a missing
@@ -422,7 +422,8 @@ wardrobe images across service restarts and deploys.
    password and URL-encode special characters in it.
 2. Import this repository into Render as a Blueprint. Enter the real Atlas URI
    when prompted for `MONGODB_URI`; never enter `localhost` or `127.0.0.1` for
-   a hosted service. Leave `MONGODB_MIRROR_URI` unset on Render. The Blueprint creates a paid Starter web service,
+   a hosted service. Leave `MONGODB_MIRROR_URI` unset on Render because the
+   local MongoDB backup is only reachable from your development computer. The Blueprint creates a paid Starter web service,
    a generated JWT secret, and a 1 GB persistent upload disk mounted at
    `/var/data`. Keep `AUTH_COOKIE_SECURE=true`; do not commit secrets.
 3. Wait for the Render service to become healthy. Copy its origin, for example

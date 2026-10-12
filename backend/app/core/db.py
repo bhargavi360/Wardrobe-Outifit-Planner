@@ -7,7 +7,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
-from pymongo import ReplaceOne
+from pymongo import ReplaceOne, UpdateOne
 
 from app.core.config import settings
 from app.models.collections import COLLECTION_NAMES
@@ -121,6 +121,31 @@ async def _copy_primary_data_to_mirror(
             await mirror[name].bulk_write(batch, ordered=False)
 
 
+async def _seed_primary_from_mirror(
+    primary: AsyncIOMotorDatabase,
+    mirror: AsyncIOMotorDatabase,
+) -> None:
+    """Import backup-only records without replacing records already in Atlas."""
+    names = set(COLLECTION_NAMES)
+    names.update(await mirror.list_collection_names())
+
+    for name in names:
+        batch: list[UpdateOne] = []
+        async for document in mirror[name].find({}):
+            batch.append(
+                UpdateOne(
+                    {"_id": document["_id"]},
+                    {"$setOnInsert": document},
+                    upsert=True,
+                )
+            )
+            if len(batch) == 500:
+                await primary[name].bulk_write(batch, ordered=False)
+                batch.clear()
+        if batch:
+            await primary[name].bulk_write(batch, ordered=False)
+
+
 async def connect_to_mongo() -> None:
     """Connect to MongoDB, initialize schemas, and sync existing primary data."""
     global _client, _mirror_client, _database
@@ -151,6 +176,7 @@ async def connect_to_mongo() -> None:
             await mirror_client.admin.command("ping")
             mirror_database = mirror_client[settings.mongodb_database]
             await _ensure_schema(mirror_database)
+            await _seed_primary_from_mirror(primary_database, mirror_database)
             await _copy_primary_data_to_mirror(primary_database, mirror_database)
             database: AsyncIOMotorDatabase | MirroredDatabase = MirroredDatabase(
                 primary_database,
