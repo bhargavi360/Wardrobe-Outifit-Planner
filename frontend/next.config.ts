@@ -39,8 +39,8 @@ const nextConfig: NextConfig = {
 export default function config(phase: string): NextConfig {
   return {
     ...nextConfig,
-    distDir: process.env.NEXT_DIST_DIR || (
-      phase === PHASE_DEVELOPMENT_SERVER ? '.next-thread-dev' : '.next-thread'
-    ),
+    // Vercel expects Next.js production output in the standard `.next` folder.
+    // Use an isolated directory only for local development sessions.
+    distDir: phase === PHASE_DEVELOPMENT_SERVER ? '.next-thread-dev' : '.next',
   };
 }
