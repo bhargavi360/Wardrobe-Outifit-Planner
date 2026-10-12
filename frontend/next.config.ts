@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
+        source: '/docs/:path*',
+        destination: `${wardrobeApiOrigin}/docs/:path*`,
+      },
+      {
+        source: '/openapi.json',
+        destination: `${wardrobeApiOrigin}/openapi.json`,
+      },
+      {
         source: '/api/:path*',
         destination: `${wardrobeApiOrigin}/api/:path*`,
       },

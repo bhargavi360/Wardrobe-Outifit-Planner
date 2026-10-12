@@ -78,14 +78,20 @@ Copy-Item .env.example .env
 uvicorn app.main:app --reload
 ```
 
-Set `MONGODB_URI` and `JWT_SECRET_KEY` in `backend/.env` for your environment.
+Set `MONGODB_URI`, optional `MONGODB_MIRROR_URI`, and `JWT_SECRET_KEY` in
+`backend/.env`. For local development, keep `MONGODB_URI=mongodb://localhost:27017`
+and set `MONGODB_MIRROR_URI` to your MongoDB Atlas connection string. The API
+uses the local database as primary, copies its existing records to Atlas during
+startup, and mirrors new writes to both databases. Both connections must be
+available for the API to start and accept writes. Docker Compose uses its local
+MongoDB service as primary and reads the Atlas mirror URI from `backend/.env`.
 Create a unique signing key with
 `python -c "import secrets; print(secrets.token_urlsafe(48))"` and set it as
 `JWT_SECRET_KEY` in `backend/.env`. The backend refuses to start with a missing
 or weak signing key. Set `AUTH_COOKIE_SECURE=true` when serving over HTTPS.
 The API initializes the `users`, `clothing_items`, `outfits`, and `preferences`
 collections during startup. API health and interactive docs are available at
-<http://localhost:8000/api/health> and <http://localhost:8000/docs>.
+<http://localhost:8000/api/health> and <http://localhost:3000/docs>.
 
 ### Frontend API configuration
 

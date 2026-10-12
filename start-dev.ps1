@@ -103,5 +103,5 @@ if (-not (Test-Listening $FrontendPort)) {
 Wait-Ready "$frontendUrl/api/health"
 Wait-Ready "$frontendUrl/login"
 Write-Host "Thread is ready: $frontendUrl"
-Write-Host "API docs: $backendUrl/docs"
+Write-Host "API docs: $frontendUrl/docs"
 Write-Host "Logs: $logRoot"

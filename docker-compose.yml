@@ -23,6 +23,7 @@
       - ./backend/.env
     environment:
       MONGODB_URI: mongodb://mongo:27017
+      # Loaded from backend/.env; MongoDB Atlas is the mirror.
       MONGODB_DATABASE: smart_wardrobe
       CORS_ORIGINS: '["http://localhost:3000","http://frontend:3000"]'
       UPLOADS_DIR: /var/data/uploads
