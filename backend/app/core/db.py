@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
+from urllib.parse import urlparse
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo import ReplaceOne
@@ -13,6 +15,24 @@ from app.models.collections import COLLECTION_NAMES
 _client: AsyncIOMotorClient | None = None
 _mirror_client: AsyncIOMotorClient | None = None
 _database: AsyncIOMotorDatabase | MirroredDatabase | None = None
+
+
+def _validate_mongodb_uri(name: str, uri: str | None) -> None:
+    """Reject copied Atlas templates before PyMongo emits a noisy connection trace."""
+    if not uri:
+        return
+    if "<" in uri or ">" in uri:
+        raise RuntimeError(
+            f"{name} contains a literal angle-bracket placeholder. Replace it with the "
+            "real MongoDB database username/password, remove the brackets, and URL-encode "
+            "special characters in the credentials."
+        )
+    if not uri.startswith(("mongodb://", "mongodb+srv://")):
+        raise RuntimeError(f"{name} must start with mongodb:// or mongodb+srv://.")
+
+
+def _is_local_mongodb_uri(uri: str) -> bool:
+    return urlparse(uri).hostname in {"localhost", "127.0.0.1", "::1"}
 
 
 class MirroredCollection:
@@ -107,6 +127,14 @@ async def connect_to_mongo() -> None:
 
     if _client is not None:
         return
+
+    _validate_mongodb_uri("MONGODB_URI", settings.mongodb_uri)
+    _validate_mongodb_uri("MONGODB_MIRROR_URI", settings.mongodb_mirror_uri)
+    if os.getenv("RENDER", "").lower() == "true" and _is_local_mongodb_uri(settings.mongodb_uri):
+        raise RuntimeError(
+            "MONGODB_URI points to localhost, which is inside the Render container. "
+            "Set MONGODB_URI to your MongoDB Atlas connection string in the Render service environment."
+        )
 
     primary_client = AsyncIOMotorClient(settings.mongodb_uri, serverSelectionTimeoutMS=5000)
     mirror_client: AsyncIOMotorClient | None = None

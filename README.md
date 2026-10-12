@@ -416,11 +416,13 @@ Blueprint is defined in `render.yaml`; its persistent disk stores uploaded
 wardrobe images across service restarts and deploys.
 
 1. Create an Atlas database and database user. Copy its connection string,
-   replace the username, password, and database name, and allow Render's
+   replace the username and password placeholders (remove the `<` and `>`),
+   URL-encode reserved characters in credentials, and allow Render's
    outbound connections in Atlas Network Access. Use a unique database
    password and URL-encode special characters in it.
-2. Import this repository into Render as a Blueprint. Enter the Atlas URI when
-   prompted for `MONGODB_URI`. The Blueprint creates a paid Starter web service,
+2. Import this repository into Render as a Blueprint. Enter the real Atlas URI
+   when prompted for `MONGODB_URI`; never enter `localhost` or `127.0.0.1` for
+   a hosted service. Leave `MONGODB_MIRROR_URI` unset on Render. The Blueprint creates a paid Starter web service,
    a generated JWT secret, and a 1 GB persistent upload disk mounted at
    `/var/data`. Keep `AUTH_COOKIE_SECURE=true`; do not commit secrets.
 3. Wait for the Render service to become healthy. Copy its origin, for example

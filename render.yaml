@@ -13,7 +13,7 @@ services:
       sizeGB: 1
     envVars:
       - key: MONGODB_URI
-        sync: false
+        sync: false # Set the Atlas URI here; localhost is unavailable on Render.
       - key: MONGODB_DATABASE
         value: smart_wardrobe
       - key: CORS_ORIGINS
