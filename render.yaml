@@ -17,7 +17,7 @@ services:
       - key: MONGODB_DATABASE
         value: smart_wardrobe
       - key: CORS_ORIGINS
-        value: "[]"
+        value: '["https://wardrobe-outfit-planner-wdmx.vercel.app"]'
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: AUTH_COOKIE_SECURE
